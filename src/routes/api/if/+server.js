@@ -19,13 +19,16 @@ export async function GET({}) {
 	const results = items.map((item) => {
 		const {
 			id,
-			updatedAt: last_update,
+			updatedAt,
 			itemData: {
 				name: title,
 				description,
 				imageIds: [image_url]
 			}
 		} = item;
+
+		const last_update = new Date(updatedAt).getTime();
+
 		return {
 			id,
 			title,
