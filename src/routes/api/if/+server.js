@@ -8,13 +8,19 @@ export async function GET({}) {
 		accessToken: env.SQUARE_ACCESS_TOKEN
 	});
 
-	const { catalogApi } = client;
+	const { catalogApi, checkoutApi } = client;
 
 	const {
-		result: { objects }
+		result: { objects: catalogObjects }
 	} = await catalogApi.listCatalog(undefined, 'ITEM');
 
-	const objectIds = objects.map((object) => object.id);
+	console.log(
+		catalogObjects.map(
+			(object) => object.itemData.variations[0].itemVariationData.locationOverrides[0]
+		)
+	);
+
+	const objectIds = catalogObjects.map((object) => object.id);
 
 	const {
 		result: { relatedObjects }
@@ -22,8 +28,6 @@ export async function GET({}) {
 		objectIds,
 		includeRelatedObjects: true
 	});
-
-	console.log(relatedObjects);
 
 	const imageURLs = new Object();
 
@@ -35,19 +39,28 @@ export async function GET({}) {
 		}
 	});
 
-	const results = objects.map((item) => {
+	const results = catalogObjects.map((item) => {
 		const {
 			id,
 			updatedAt,
 			itemData: {
 				name: title,
 				description,
-				imageIds: [image_id]
+				imageIds: [image_id],
+				variations: [
+					{
+						itemVariationData: {
+							priceMoney: { amount, currency },
+							locationOverrides: [{ soldOut }]
+						}
+					}
+				]
 			}
 		} = item;
 
 		const last_update = new Date(updatedAt).getTime();
 		const image_url = imageURLs[image_id];
+		const price = Number(amount);
 
 		return {
 			id,
@@ -58,13 +71,16 @@ export async function GET({}) {
 			blob: {
 				title,
 				description,
-				image_url
+				image_url,
+				price,
+				currency,
+				soldOut
 			}
 		};
 	});
 
 	const data = {
-		results_size: objects.length,
+		results_size: catalogObjects.length,
 		results
 	};
 
