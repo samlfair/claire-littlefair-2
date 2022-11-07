@@ -4,30 +4,50 @@ import { env } from '$env/dynamic/private';
 
 /** @type {import('./$types').RequestHandler} */
 export async function GET({}) {
-	console.log(env.SQUARE_ACCESS_TOKEN);
 	const client = new Client({
-		accessToken: env.SQUARE_ACCESS_TOKEN,
-		types: 'ITEM'
+		accessToken: env.SQUARE_ACCESS_TOKEN
 	});
 
 	const { catalogApi } = client;
 
-	const response = await catalogApi.listCatalog();
+	const {
+		result: { objects }
+	} = await catalogApi.listCatalog(undefined, 'ITEM');
 
-	const items = response.result.objects.filter((objects) => objects.type === 'ITEM');
+	const objectIds = objects.map((object) => object.id);
 
-	const results = items.map((item) => {
+	const {
+		result: { relatedObjects }
+	} = await catalogApi.batchRetrieveCatalogObjects({
+		objectIds,
+		includeRelatedObjects: true
+	});
+
+	console.log(relatedObjects);
+
+	const imageURLs = new Object();
+
+	relatedObjects.forEach((object) => {
+		if (object.type === 'IMAGE') {
+			Object.assign(imageURLs, {
+				[object.id]: object.imageData.url
+			});
+		}
+	});
+
+	const results = objects.map((item) => {
 		const {
 			id,
 			updatedAt,
 			itemData: {
 				name: title,
 				description,
-				imageIds: [image_url]
+				imageIds: [image_id]
 			}
 		} = item;
 
 		const last_update = new Date(updatedAt).getTime();
+		const image_url = imageURLs[image_id];
 
 		return {
 			id,
@@ -44,7 +64,7 @@ export async function GET({}) {
 	});
 
 	const data = {
-		results_size: items.length,
+		results_size: objects.length,
 		results
 	};
 
