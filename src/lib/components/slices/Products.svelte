@@ -1,11 +1,11 @@
 <script>
 	export let slice;
 
-  const { items } = slice
+	const { items } = slice;
 </script>
 
 {#each items as item}
-  <img src={} alt="">
+	<img src="" alt="" />
 {/each}
 
 <pre>
